@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id // Clerk User ID
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  books     Book[]
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  
+  // Relations
+  books     Book[]
+}
+
+model Book {
+  id          String   @id @default(uuid())
+  title       String
+  author      String
+  summary     String?  @db.Text
+  coverUrl    String?  // R2 Cover Image
+  pdfUrl      String   // R2 PDF File
+  pages       Int?
+  rating      Float?   @default(0)
+  isAvailable Boolean  @default(true)
+  
+  // Foreign Keys
+  userId      String
+  categoryId  String?
+  
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([categoryId])
+  @@index([userId])
+}
