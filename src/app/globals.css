@@ -1,26 +1,42 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Midnight Luxe Custom Aesthetic Tokens */
+  --color-primary-500: #6366f1; /* Indigo */
+  --color-surface-base: #0A0D14;
+  --color-surface-elevated: #161A26;
+  --color-surface-raised: #1C2230;
+  
+  --color-text-main: #F4F4F5;
+  --color-text-dimmed: #A1A1AA;
+  
+  --color-border-dim: #272A37;
+  --color-border-glow: #3E455C;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: var(--color-surface-base);
+    --foreground: var(--color-text-main);
   }
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Scrollbar styling for premium feel */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface-base); 
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-dim); 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-glow); 
 }
