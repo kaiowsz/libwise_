@@ -1,6 +1,7 @@
 import { BookOpen } from "lucide-react";
 import Link from "next/link";
 import SearchBar from "./SearchBar";
+import MobileSearch from "./MobileSearch";
 import AuthButtons from "./AuthButtons";
 
 export default function Header() {
@@ -13,11 +14,14 @@ export default function Header() {
           <span className="font-bold text-lg tracking-tight">Libwise</span>
         </Link>
         
-        {/* Search */}
+        {/* Search (desktop) */}
         <SearchBar />
 
-        {/* Auth / Actions */}
-        <AuthButtons />
+        {/* Mobile Search + Auth */}
+        <div className="flex items-center gap-2">
+          <MobileSearch />
+          <AuthButtons />
+        </div>
       </div>
     </header>
   );

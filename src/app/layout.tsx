@@ -1,6 +1,7 @@
 import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import Footer from '@/components/Footer';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -18,8 +19,11 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" className="dark">
-        <body className={`${inter.className} bg-surface-base text-text-main min-h-screen selection:bg-primary-500/30 selection:text-white antialiased`}>
-          {children}
+        <body className={`${inter.className} bg-surface-base text-text-main min-h-screen selection:bg-primary-500/30 selection:text-white antialiased flex flex-col`}>
+          <div className="flex-1">
+            {children}
+          </div>
+          <Footer />
         </body>
       </html>
     </ClerkProvider>

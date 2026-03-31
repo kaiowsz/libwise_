@@ -36,7 +36,7 @@ export default function SearchBar() {
 
     setIsLoading(true);
     try {
-      const books = await searchBooks(query);
+      const { books } = await searchBooks({ query });
       setResults(books);
       setIsOpen(true);
     } catch {
