@@ -1,11 +1,33 @@
-import { getBookById } from "@/actions/book";
+import { getBookById, incrementViewCount } from "@/actions/book";
 import Header from "@/components/Header";
 import DeleteBookButton from "@/components/DeleteBookButton";
-import { BookOpen, User, Calendar, FileText, ArrowLeft, Star } from "lucide-react";
+import ReadPdfButton from "@/components/ReadPdfButton";
+import { BookOpen, User, Calendar, FileText, ArrowLeft, Tag, Eye, Pencil } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const book = await getBookById(id);
+
+  if (!book) {
+    return { title: "Livro não encontrado | Libwise" };
+  }
+
+  return {
+    title: `${book.title} — ${book.author} | Libwise`,
+    description: book.summary?.slice(0, 160) || `Leia ${book.title} por ${book.author} na Libwise.`,
+    openGraph: {
+      title: `${book.title} — ${book.author}`,
+      description: book.summary?.slice(0, 160) || `Leia ${book.title} na Libwise.`,
+      images: book.coverUrl ? [{ url: book.coverUrl }] : [],
+      type: "article",
+    },
+  };
+}
 
 export default async function BookDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -48,15 +70,7 @@ export default async function BookDetailsPage({ params }: { params: Promise<{ id
             </div>
             
             <div className="mt-8">
-              <a 
-                href={book.pdfUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-center gap-3 bg-[#D1B898] hover:bg-[#c2a47e] text-black w-full px-8 py-4 font-bold rounded-sm shadow-[0_0_30px_rgba(209,184,152,0.15)] hover:shadow-[0_0_40px_rgba(209,184,152,0.3)] transition-all transform hover:-translate-y-1"
-              >
-                <BookOpen className="w-5 h-5" />
-                LER PDF AGORA
-              </a>
+              <ReadPdfButton bookId={book.id} pdfUrl={book.pdfUrl} />
             </div>
           </div>
           
@@ -72,23 +86,29 @@ export default async function BookDetailsPage({ params }: { params: Promise<{ id
             </div>
             
             <div className="flex flex-wrap gap-x-8 gap-y-4 py-6 border-y border-border-dim/50 mb-8">
-              <div className="flex items-center gap-3 text-text-dimmed">
-                <div className="bg-surface-elevated p-2 rounded-full">
-                  <Star className="w-5 h-5 text-yellow-500" />
+              {book.category && (
+                <div className="flex items-center gap-3 text-text-dimmed">
+                  <div className="bg-surface-elevated p-2 rounded-full">
+                    <Tag className="w-5 h-5 text-[#D1B898]" />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider font-semibold opacity-70">Categoria</p>
+                    <Link href={`/?category=${book.category.id}`} className="font-medium text-white hover:text-primary-500 transition-colors">
+                      {book.category.name}
+                    </Link>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wider font-semibold opacity-70">Status</p>
-                  <p className="font-medium text-white">{book.isAvailable ? "Disponível" : "Indisponível"}</p>
-                </div>
-              </div>
-              
+              )}
+
               <div className="flex items-center gap-3 text-text-dimmed">
                 <div className="bg-surface-elevated p-2 rounded-full">
                   <User className="w-5 h-5 text-blue-400" />
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wider font-semibold opacity-70">Uploader</p>
-                  <p className="font-medium text-white">{book.user?.name || book.user?.email || "Anônimo"}</p>
+                  <Link href={`/user/${book.userId}`} className="font-medium text-white hover:text-primary-500 transition-colors">
+                    {book.user?.name || book.user?.email || "Anônimo"}
+                  </Link>
                 </div>
               </div>
 
@@ -113,6 +133,16 @@ export default async function BookDetailsPage({ params }: { params: Promise<{ id
                   </div>
                 </div>
               )}
+
+              <div className="flex items-center gap-3 text-text-dimmed">
+                <div className="bg-surface-elevated p-2 rounded-full">
+                  <Eye className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider font-semibold opacity-70">Visualizações</p>
+                  <p className="font-medium text-white">{book.viewCount ?? 0}</p>
+                </div>
+              </div>
             </div>
             
             <div className="space-y-4 pb-8">
@@ -126,7 +156,14 @@ export default async function BookDetailsPage({ params }: { params: Promise<{ id
             </div>
 
             {isOwner && (
-              <div className="pt-4 border-t border-border-dim/50">
+              <div className="pt-4 border-t border-border-dim/50 flex flex-wrap items-center gap-3">
+                <Link
+                  href={`/book/${book.id}/edit`}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-500 hover:text-white border border-primary-500/30 hover:border-primary-500/60 rounded-sm transition-all hover:bg-primary-500/10 mt-4"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Editar Livro
+                </Link>
                 <DeleteBookButton bookId={book.id} />
               </div>
             )}
