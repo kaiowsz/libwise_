@@ -35,6 +35,7 @@ model Book {
   coverUrl    String?  // R2 Cover Image
   pdfUrl      String   // R2 PDF File
   pages       Int?
+  viewCount   Int      @default(0)
   rating      Float?   @default(0)
   isAvailable Boolean  @default(true)
   
