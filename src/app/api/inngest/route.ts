@@ -8,3 +8,5 @@
 //     processPdfUpload,
 //   ],
 // });
+
+export {}; // avoid not a module error
