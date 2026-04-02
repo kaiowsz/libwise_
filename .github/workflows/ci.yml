@@ -16,6 +16,8 @@ jobs:
       R2_BUCKET_NAME: "dummy"
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_Y2xlcmsuZXhhbXBsZS5jb20k"
       CLERK_SECRET_KEY: "sk_test_dummy"
+      INNGEST_SIGNING_KEY: "dummy"
+      INNGEST_EVENT_KEY: "dummy"
     steps:
       - uses: actions/checkout@v4
       

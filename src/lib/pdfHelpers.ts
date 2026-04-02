@@ -1,4 +1,4 @@
-export async function generatePDFCover(file: File): Promise<Blob | null> {
+export async function generatePDFCover(file: File): Promise<{ blob: Blob; pageCount: number } | null> {
   try {
 
     const pdfjs = await import("pdfjs-dist");
@@ -8,6 +8,7 @@ export async function generatePDFCover(file: File): Promise<Blob | null> {
     const arrayBuffer = await file.arrayBuffer();
     
     const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    const pageCount = pdf.numPages;
     const page = await pdf.getPage(1);
     
     const viewport = page.getViewport({ scale: 1.5 });
@@ -30,7 +31,7 @@ export async function generatePDFCover(file: File): Promise<Blob | null> {
     return new Promise((resolve, reject) => {
       canvas.toBlob((blob) => {
         if (blob) {
-          resolve(blob);
+          resolve({ blob, pageCount });
         } else {
           reject(new Error("Falha ao gerar a imagem no canvas."));
         }

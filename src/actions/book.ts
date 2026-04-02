@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { r2 } from "@/lib/r2";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { PDFDocument } from "pdf-lib";
@@ -18,33 +19,58 @@ async function getClientIP(): Promise<string> {
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
 }
 
+export async function getUploadUrls(files: { name: string; type: string }[]) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+  
+  // Rate limit: 5 url generation requests per minute
+  checkRateLimit(`upload_urls:${userId}`, 5, 60_000);
+
+  const bucket = process.env.R2_BUCKET_NAME!;
+  
+  const urls = await Promise.all(
+    files.map(async (f) => {
+      const isPdf = f.type === 'application/pdf';
+      const folder = isPdf ? 'pdfs' : 'covers';
+      const cleanName = f.name.replace(/[^a-zA-Z0-9.\-_]/g, '');
+      const key = `${folder}/${Date.now()}-${cleanName}`;
+      
+      const command = new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        ContentType: f.type,
+      });
+      
+      // URL expires in 15 minutes (900 seconds)
+      const url = await getSignedUrl(r2, command, { expiresIn: 900 });
+      return { url, key, name: f.name };
+    })
+  );
+
+  return { success: true, urls };
+}
+
 export async function createBook(formData: FormData) {
   const { userId } = await auth();
   if (!userId) {
     throw new Error("Unauthorized");
   }
 
-  // Rate limit: 5 uploads per minute per user
-  checkRateLimit(`upload:${userId}`, 5, 60_000);
+  // Rate limit: 5 creations per minute per user
+  checkRateLimit(`create:${userId}`, 5, 60_000);
 
   const title = formData.get("title") as string;
   const author = formData.get("author") as string;
   const summary = formData.get("summary") as string;
   const categoryName = (formData.get("category") as string)?.trim();
   
-  const coverFile = formData.get("cover") as File;
-  const pdfFile = formData.get("pdf") as File;
+  const coverKey = formData.get("coverKey") as string;
+  const pdfKey = formData.get("pdfKey") as string;
+  const pagesStr = formData.get("pages") as string;
+  const pages = pagesStr ? parseInt(pagesStr, 10) : null;
 
-  if (!title || !author || !coverFile || !pdfFile) {
+  if (!title || !author || !coverKey || !pdfKey) {
     throw new Error("Missing required fields");
-  }
-
-  // Server-side file size validation
-  if (pdfFile.size > MAX_PDF_SIZE) {
-    throw new Error(`O PDF excede o limite de ${MAX_PDF_SIZE / (1024 * 1024)}MB.`);
-  }
-  if (coverFile.size > MAX_COVER_SIZE) {
-    throw new Error(`A capa excede o limite de ${MAX_COVER_SIZE / (1024 * 1024)}MB.`);
   }
 
   // Ensure user exists in Prisma
@@ -77,41 +103,6 @@ export async function createBook(formData: FormData) {
       create: { name: categoryName },
     });
     categoryId = category.id;
-  }
-
-  // Generate unique keys
-  const coverKey = `covers/${Date.now()}-${coverFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
-  const pdfKey = `pdfs/${Date.now()}-${pdfFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '')}`;
-  const bucket = process.env.R2_BUCKET_NAME!;
-
-  // Upload Cover
-  const coverBuffer = Buffer.from(await coverFile.arrayBuffer());
-  await r2.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: coverKey,
-      Body: coverBuffer,
-      ContentType: coverFile.type,
-    })
-  );
-
-  // Upload PDF
-  const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
-  await r2.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: pdfKey,
-      Body: pdfBuffer,
-      ContentType: pdfFile.type,
-    })
-  );
-
-  let pages = null;
-  try {
-    const pdfDoc = await PDFDocument.load(pdfBuffer);
-    pages = pdfDoc.getPageCount();
-  } catch (error) {
-    console.error("Failed to extract PDF page count:", error);
   }
 
   const publicUrl = process.env.NEXT_PUBLIC_R2_DEV_URL || process.env.R2_PUBLIC_DEV_URL || "";

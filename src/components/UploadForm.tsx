@@ -2,7 +2,7 @@
 
 import Header from "@/components/Header";
 import CategorySelect from "@/components/CategorySelect";
-import { createBook } from "@/actions/book";
+import { createBook, getUploadUrls } from "@/actions/book";
 import { useState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import Image from "next/image";
@@ -31,6 +31,7 @@ export default function UploadPageClient({ categories }: UploadPageClientProps) 
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [coverBlob, setCoverBlob] = useState<Blob | null>(null);
+  const [pageCount, setPageCount] = useState<number | null>(null);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [isGeneratingCover, setIsGeneratingCover] = useState(false);
 
@@ -50,11 +51,12 @@ export default function UploadPageClient({ categories }: UploadPageClientProps) 
 
     setIsGeneratingCover(true);
     setError(null);
-    const blob = await generatePDFCover(file);
+    const result = await generatePDFCover(file);
     
-    if (blob) {
-      setCoverBlob(blob);
-      setCoverPreviewUrl(URL.createObjectURL(blob));
+    if (result) {
+      setCoverBlob(result.blob);
+      setPageCount(result.pageCount);
+      setCoverPreviewUrl(URL.createObjectURL(result.blob));
     } else {
       setCoverBlob(null);
       setCoverPreviewUrl(null);
@@ -71,8 +73,44 @@ export default function UploadPageClient({ categories }: UploadPageClientProps) 
       }
       setError(null);
       
-      formData.append("cover", coverBlob, "cover.jpg");
+      const pdfFile = formData.get("pdf") as File;
+      
+      // 1. Pede ao servidor as Senhas do Cloudflare R2
+      const urlRequest = [
+        { name: "cover.jpg", type: "image/jpeg" },
+        { name: pdfFile.name, type: pdfFile.type }
+      ];
+      
+      const { urls } = await getUploadUrls(urlRequest);
+      const coverUploadInfo = urls[0];
+      const pdfUploadInfo = urls[1];
 
+      // 2. O próprio navegador faz o upload super pesado direto pro Cloudflare (Ignora a Vercel!)
+      const uploadPromises = [
+        fetch(coverUploadInfo.url, { 
+          method: "PUT", 
+          body: coverBlob, 
+          headers: { "Content-Type": "image/jpeg" } 
+        }),
+        fetch(pdfUploadInfo.url, { 
+          method: "PUT", 
+          body: pdfFile, 
+          headers: { "Content-Type": pdfFile.type } 
+        })
+      ];
+
+      const responses = await Promise.all(uploadPromises);
+      if (!responses[0].ok || !responses[1].ok) {
+        throw new Error("Falha ao subir arquivos para a nuvem. Tente novamente.");
+      }
+
+      // 3. Limpa as partes gigantes da requisição antes de mandar pro Next.js
+      formData.delete("pdf");
+      formData.append("coverKey", coverUploadInfo.key);
+      formData.append("pdfKey", pdfUploadInfo.key);
+      if (pageCount) formData.append("pages", pageCount.toString());
+
+      // 4. Salva apenas as Keys (Strings levinhas) no Banco de Dados
       await createBook(formData);
       
       setSuccess(true);

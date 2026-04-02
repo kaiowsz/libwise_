@@ -10,11 +10,11 @@
     "postinstall": "prisma generate",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1018.0",
-    "@aws-sdk/s3-request-presigner": "^3.1019.0",
+    "@aws-sdk/s3-request-presigner": "^3.1022.0",
     "@clerk/nextjs": "^7.0.7",
     "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.5.0",
