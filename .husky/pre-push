@@ -1,0 +1,19 @@
+#!/bin/sh
+
+echo "================================================="
+echo "🐶 Husky: Verificando código antes de fazer Push!"
+echo "================================================="
+
+echo "1/4 -> Checando TypeScript..."
+npx tsc --noEmit || exit 1
+
+echo "2/4 -> Rodando Linter..."
+npm run lint || exit 1
+
+echo "3/4 -> Testes Unitários (Vitest)..."
+npm run test -- --run || exit 1
+
+echo "4/4 -> Testes E2E (Playwright)..."
+npm run test:e2e || exit 1
+
+echo "✅ Tudo Perfeito! Mandando para o GitHub..."

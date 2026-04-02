@@ -14,7 +14,7 @@ jobs:
       R2_ACCESS_KEY_ID: "dummy"
       R2_SECRET_ACCESS_KEY: "dummy"
       R2_BUCKET_NAME: "dummy"
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_dummy"
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_Y2xlcmsuZXhhbXBsZS5jb20k"
       CLERK_SECRET_KEY: "sk_test_dummy"
     steps:
       - uses: actions/checkout@v4

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Deixando vazio para não bloquear commits locais rápidos. 
+# A verificação pesada roda apenas no momento do `git push`.
